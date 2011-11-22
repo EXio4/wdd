@@ -17,6 +17,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+## Version 0.5.1
+## TopList funcionando a medias. Revisando demas funciones.
+
 ## Version 0.5
 ## Ahora vuelve a funcionar
 
@@ -114,7 +117,7 @@ normal.extract() {
 recho "RandomWallBase running.."
 while true; do
 normal.reload
-wallpapers=$(cat $file1 | grep "<a href=" | grep wallpaper | cut -d"=" -f2 | cut -d"\"" -f2 | grep wallbase) # 
+wallpapers=$(cat $file1 | grep "<a href=" | grep wallpaper | cut -d"=" -f2 | cut -d"\"" -f2 | grep wallbase | cut -d'"' -f2) # 
 for i in $wallpapers; do
 	[[ "$cant" = "$walls" ]] && break 2
 	wget -O "$file2" "$i" &>/dev/null 
@@ -245,7 +248,7 @@ toplist.reload() {
 
 
 toplist.extract2() {
-code=$(cat $1 | grep jpg | grep "<img" | cut -d"'" -f2) 
+code=$(cat $1 | proc_line_code) 
 for i in $code; do
 		gecho "URL: $i"
 		echo $i >> $wget_list
