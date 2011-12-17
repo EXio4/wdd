@@ -17,6 +17,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+## Version 0.5.2
+## Mejoradas algunas funciones y traducido al español
+
 ## Version 0.5.1
 ## TopList funcionando a medias. Revisando demas funciones.
 
@@ -51,9 +54,10 @@ categoria="high-resolution" # Aca puede ir 'high-resolution' 'rozne' 'manga-anim
 dir="$PWD" # Directorio por default [A USAR]
 
 ## Variables del programa [Se recomienda no editarlas]
-file1="cache1.txt"
-file2="cache2.txt"
-file3="cache3.txt"
+file1="/tmp/wdd/cache1"
+file2="/tmp/wdd/cache2"
+file3="/tmp/wdd/cache3"
+mkdir -p /tmp/wdd
 wget_list="wget-list.txt"
 option="normal"
 cant=0
@@ -94,10 +98,10 @@ code=$(cat $1 | proc_line_code)
 for i in $code; do
 	if [[ "$i" = *${categoria}* ]]; then
 		gecho "URL: $i"
-		echo $i >> $wget_list
+		echo "$i" >> $wget_list
 		return 0
 	else
-		recho "URL: $i [Not downloading...]"
+		recho "URL: $i [Salteado]"
 		return 1
 	fi
 done
@@ -106,7 +110,7 @@ normal.extract2l() {
 code=$(cat $1 | proc_line_code) 
 for i in $code; do
 		gecho "URL: $i"
-		echo $i >> $wget_list
+		echo "$i" >> $wget_list
 		return 0
 
 done
@@ -114,7 +118,7 @@ done
 
 
 normal.extract() {
-recho "RandomWallBase running.."
+recho "RandomWallBase >>>"
 while true; do
 normal.reload
 wallpapers=$(cat $file1 | grep "<a href=" | grep wallpaper | cut -d"=" -f2 | cut -d"\"" -f2 | grep wallbase | cut -d'"' -f2) # 
@@ -131,12 +135,12 @@ done
 }
 
 download_list() {
-gecho "Downloading list of files.."
+gecho "Descargando archivos."
 for i in $(cat $wget_list); do # Leemos la lista
 	if [[ ! -e "$(basename $i)" ]]; then
 		wget -O "./$(basename $i)" $i # Bajamos el archivo si existe
 	else
-		recho "$i already downloaded.." # sino tiramos el "error"
+		recho "El fichero $i ya se encuentra en el sistema" # sino tiramos el "error"
 	fi
 done	
 }
@@ -146,7 +150,7 @@ walls=$1
 shift
 search=$1
 [[ -z $search ]] && return 1
-recho "Searching $search in deviantart..."
+recho "Buscando en deviantart ($search)"
 wget -O "$file1" "http://browse.deviantart.com/?qh=&section=&q=$search" -U Mozilla &>/dev/null
 lista=$(cat $file1 | grep href | grep "http://"|grep ".deviantart.com/art/" | cut -d"<" -f4|grep href|cut -d'"' -f4)
 cant=0
@@ -204,9 +208,7 @@ rprintf "Inserte la url: "
 read url
 [[ -z $url ]] && exit 2
 unset categoria
-wget -O $file1 $url
-result=$?
-[[ $result != 0 ]] && exit 3
+wget -O $file1 "$url" || exit 3
 normal.extract2 $file1
 }
 menu2.3() {
@@ -265,9 +267,7 @@ wallpapers=$(cat $file1 | grep "<a href=" | grep wallpaper | cut -d"=" -f2 | cut
 for i in $wallpapers; do
 	[[ "$cant" = "$walls" ]] && break 2
 	wget -O "$file2" "$i" &>/dev/null 
-	toplist.extract2 $file2
-	result=$?
-	if [[ $result = 0 ]]; then
+	if toplist.extract2 $file2; then
 		cant=$(expr $cant + 1)
 	fi
 done
@@ -288,7 +288,7 @@ fi
 recho "De que categoria?"
 recho "1- Normal"
 recho "2- Softcore"
-recho "3- XXX"
+recho "3- NSFW [No implementado]"
 rprintf ">> "
 read catg
 case $catg in
@@ -301,8 +301,8 @@ case $catg in
                 cat="010"
         ;;
         3)
-                recho "Usando XXX.."
-                cat="001"
+                recho "Usando Softcore, NSFW no implementado."
+                cat="010"
         ;;
         *)
 				recho "Usar categoria de modo RAW ? [Solo use esta funcion si sabe lo que hace]"
@@ -329,16 +329,14 @@ toplist.extract
 
 bajar_todo_wallbase() {
 	
-recho "Experimental function.."
-recho "Use [Ctrl-C] to quit.. or enter to continue"
+recho "Funcion experimental"
+recho "Use [Ctrl-C] para salir. o enter para continuar"
 read
-recho "<-  Starting 'downloder' ->"
+recho "<-  Iniciando 'downloader' ->"
 walls="500000" 
 cat="111"
 
 toplist.extract
-
-##http://wallbase.cc/toplist/[cual_empieza]/all/eqeq/0x0/0/[apto_para_cardiacos][softcore][hardcore]/32/0
 
 }
 
@@ -388,10 +386,12 @@ recho "Vamos a un directorio.."
 if [[ "$1" = "-d" ]]; then
 	gprintf "Inserte el directorio: "
 	read path
-	cd $path
-	result=$?
-	if [[ $result != 0 ]]; then
-		recho "Hubo un error, compruebe que existe el directorio"
+	if [[ ! -d "$path" ]]; then
+		 recho "Error: El directo $path no existe."
+		 exit 3
+	fi
+	if ! cd "$path"; then
+		recho "Hubo un error al cambiar de directorio"
 		exit 3
 	fi
 fi
@@ -401,15 +401,13 @@ if [[ -e $wget_list ]]; then
 	read opt
 	case "$opt" in
 		y|Y|s|S)
-			rm $wget_list
-			result=$?
-			if [[ $result != 0 ]]; then
-				recho "Failed deleting $wget_file .."
+			if ! rm $wget_list; then
+				recho "Error borrando $wget_file .."
 				exit 1
 			fi
 		;;		
 		*)
-			recho "Warning.. no deleting $wget_list.."
+			recho "Advertencia, no se borra $wget_list.."
 		;;
 	esac
 fi
